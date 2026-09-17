@@ -105,8 +105,8 @@ $$\text{CLV} = \text{AOV} \times \text{Annual Frequency} \times m \times \left( 
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/<your-username>/amazon-supply-chain-ai.git
-cd amazon-supply-chain-ai
+git clone https://github.com/arjundangwaluk/supplychain.git
+cd supplychain
 ```
 
 ### 2. Set Up Virtual Environment
