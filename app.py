@@ -118,6 +118,14 @@ with st.spinner("Initializing AI Engines and Ingesting Amazon Supply Chain Data.
     processed_reviews_df, sku_sentiment_df = get_nlp_sentiment_data(raw_reviews_df)
     forecast_engine, forecast_results, featured_sales_df = get_forecasting_models(sales_df, sku_sentiment_df)
     rfm_clv_df, churn_results, sales_scored_df, anomaly_alerts_df = get_customer_lifecycle_data(orders_df, sales_df)
+    
+    if 'sub_category' not in inventory_df.columns:
+        inventory_df = inventory_df.merge(
+            catalog_df[['product_id', 'sub_category']].drop_duplicates('product_id'),
+            on='product_id',
+            how='left'
+        )
+        inventory_df['sub_category'] = inventory_df['sub_category'].fillna('General')
 
 
 # ==========================================================
@@ -132,9 +140,21 @@ selected_category = st.sidebar.selectbox("Filter Primary Category:", category_li
 if selected_category != "All Categories":
     filtered_inventory = inventory_df[inventory_df['primary_category'] == selected_category].copy()
     filtered_sales = sales_df[sales_df['primary_category'] == selected_category].copy()
+    filtered_reviews = processed_reviews_df[processed_reviews_df['primary_category'] == selected_category].copy()
+    filtered_sku_sentiment = sku_sentiment_df[sku_sentiment_df['product_id'].isin(filtered_inventory['product_id'])].copy()
+    filtered_rfm_clv = rfm_clv_df[rfm_clv_df['primary_category'] == selected_category].copy()
+    if filtered_rfm_clv.empty:
+        filtered_rfm_clv = rfm_clv_df.copy()
+    filtered_alerts = anomaly_alerts_df[anomaly_alerts_df['product_id'].isin(filtered_inventory['product_id'])].copy()
+    if filtered_alerts.empty:
+        filtered_alerts = anomaly_alerts_df.copy()
 else:
     filtered_inventory = inventory_df.copy()
     filtered_sales = sales_df.copy()
+    filtered_reviews = processed_reviews_df.copy()
+    filtered_sku_sentiment = sku_sentiment_df.copy()
+    filtered_rfm_clv = rfm_clv_df.copy()
+    filtered_alerts = anomaly_alerts_df.copy()
 
 st.sidebar.divider()
 st.sidebar.subheader("Operations Research Tuners")
@@ -167,6 +187,9 @@ st.sidebar.markdown("""
 # ==========================================================
 st.markdown('<div class="main-title">Supply Chain Intelligence & Predictive Operations Command</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">End-to-End Enterprise ML, Voice-of-Customer NLP, and Inventory Analytics Platform</div>', unsafe_allow_html=True)
+
+if selected_category != "All Categories":
+    st.info(f"🔎 **Active Primary Category Filter**: `{selected_category}` — Displaying metrics, forecasts, customer segments, and voice-of-customer for **{len(filtered_inventory):,} matching SKUs**.")
 
 # Tabs
 tab1, tab2, tab3, tab4 = st.tabs([
@@ -223,7 +246,7 @@ with tab1:
     total_valuation = filtered_inventory['inventory_valuation'].sum()
     stockout_risk_skus = (filtered_inventory['requisition_status'] != 'HEALTHY_INVENTORY').sum()
     avg_lead_time = filtered_inventory['mean_lead_time'].mean()
-    net_sentiment = sku_sentiment_df['mean_sentiment'].mean()
+    net_sentiment = filtered_sku_sentiment['mean_sentiment'].mean() if not filtered_sku_sentiment.empty else sku_sentiment_df['mean_sentiment'].mean()
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -260,11 +283,17 @@ with tab1:
         )
 
     with c_right:
-        st.markdown("##### 📊 Inventory Valuation by Category")
-        cat_valuation = filtered_inventory.groupby('primary_category')['inventory_valuation'].sum().reset_index()
+        if selected_category == "All Categories":
+            st.markdown("##### 📊 Inventory Valuation by Category")
+            cat_group = 'primary_category'
+        else:
+            st.markdown(f"##### 📊 Sub-Category Breakdown: {selected_category}")
+            cat_group = 'sub_category' if 'sub_category' in filtered_inventory.columns else 'primary_category'
+        
+        cat_valuation = filtered_inventory.groupby(cat_group)['inventory_valuation'].sum().reset_index()
         fig_cat = px.pie(
             cat_valuation,
-            names='primary_category',
+            names=cat_group,
             values='inventory_valuation',
             hole=0.45,
             color_discrete_sequence=px.colors.qualitative.Prism
@@ -402,7 +431,7 @@ with tab3:
 
     with t3_col1:
         st.markdown("##### 🎯 RFM Customer Segmentation Matrix")
-        segment_counts = rfm_clv_df['customer_segment'].value_counts().reset_index()
+        segment_counts = filtered_rfm_clv['customer_segment'].value_counts().reset_index()
         fig_rfm = px.bar(
             segment_counts,
             x='count',
@@ -417,7 +446,7 @@ with tab3:
     with t3_col2:
         st.markdown("##### 💎 Customer Lifetime Value (CLV) Distribution")
         fig_clv = px.histogram(
-            rfm_clv_df,
+            filtered_rfm_clv,
             x='clv_lifetime',
             color='clv_tier',
             nbins=35,
@@ -438,17 +467,17 @@ with tab3:
 
     with c_churn:
         st.markdown("##### ⚠️ Customer Churn Risk Classification (Random Forest)")
-        if 'churn_risk_level' not in rfm_clv_df.columns:
+        if 'churn_risk_level' not in filtered_rfm_clv.columns:
             if 'scored_customers' in churn_results and 'churn_risk_level' in churn_results['scored_customers'].columns:
-                rfm_clv_df = churn_results['scored_customers']
+                filtered_rfm_clv = churn_results['scored_customers']
             else:
-                rfm_clv_df['churn_probability'] = np.clip((rfm_clv_df['recency'] - 30) / 90.0, 0.0, 1.0).round(2)
-                rfm_clv_df['churn_risk_level'] = pd.cut(
-                    rfm_clv_df['churn_probability'],
+                filtered_rfm_clv['churn_probability'] = np.clip((filtered_rfm_clv['recency'] - 30) / 90.0, 0.0, 1.0).round(2)
+                filtered_rfm_clv['churn_risk_level'] = pd.cut(
+                    filtered_rfm_clv['churn_probability'],
                     bins=[-0.01, 0.30, 0.70, 1.0],
                     labels=['Low Risk', 'Moderate Risk', 'Critical Risk']
                 )
-        churn_counts = rfm_clv_df['churn_risk_level'].value_counts().reset_index()
+        churn_counts = filtered_rfm_clv['churn_risk_level'].value_counts().reset_index()
         fig_churn = px.pie(
             churn_counts,
             names='churn_risk_level',
@@ -474,7 +503,7 @@ with tab3:
         st.markdown("Flagged using **Isolation Forest** and **Rolling Z-Scores ($Z > 2.5$)**:")
 
         st.dataframe(
-            anomaly_alerts_df[['date', 'product_id', 'units_demanded', 'z_score_demand', 'severity', 'recommended_action']].head(10),
+            filtered_alerts[['date', 'product_id', 'units_demanded', 'z_score_demand', 'severity', 'recommended_action']].head(10),
             column_config={
                 "date": "Detection Date",
                 "units_demanded": "Spike Units",
@@ -496,8 +525,8 @@ with tab4:
     col_v1, col_v2 = st.columns([1, 1])
 
     with col_v1:
-        st.markdown("##### 🏷️ Sentiment Distribution by Primary Category")
-        cat_sentiment = processed_reviews_df.groupby(['primary_category', 'sentiment_label']).size().unstack(fill_value=0).reset_index()
+        st.markdown("##### 🏷️ Sentiment Distribution by Category")
+        cat_sentiment = filtered_reviews.groupby(['primary_category', 'sentiment_label']).size().unstack(fill_value=0).reset_index()
         cat_sentiment_melted = cat_sentiment.melt(id_vars='primary_category', var_name='Sentiment', value_name='Count')
 
         fig_cat_sent = px.bar(
@@ -512,13 +541,15 @@ with tab4:
         st.plotly_chart(fig_cat_sent, use_container_width=True)
 
     with col_v2:
-        st.markdown("##### 🧩 Aspect Sentiment Radar Breakdown")
+        st.markdown(f"##### 🧩 Aspect Sentiment Radar Breakdown ({selected_category})")
         aspect_means = {
-            'Quality & Build': processed_reviews_df['aspect_quality'].replace(0, np.nan).dropna().mean(),
-            'Price & Value': processed_reviews_df['aspect_price'].replace(0, np.nan).dropna().mean(),
-            'Delivery & Packaging': processed_reviews_df['aspect_delivery'].replace(0, np.nan).dropna().mean(),
-            'Performance': processed_reviews_df['aspect_performance'].replace(0, np.nan).dropna().mean()
+            'Quality & Build': filtered_reviews['aspect_quality'].replace(0, np.nan).dropna().mean(),
+            'Price & Value': filtered_reviews['aspect_price'].replace(0, np.nan).dropna().mean(),
+            'Delivery & Packaging': filtered_reviews['aspect_delivery'].replace(0, np.nan).dropna().mean(),
+            'Performance': filtered_reviews['aspect_performance'].replace(0, np.nan).dropna().mean()
         }
+        # Fallback to zero if all NaN
+        aspect_means = {k: (0.0 if np.isnan(v) else v) for k, v in aspect_means.items()}
         radar_df = pd.DataFrame({
             'Aspect': list(aspect_means.keys()),
             'Score': list(aspect_means.values())
@@ -532,8 +563,11 @@ with tab4:
     st.divider()
 
     # Voice of Customer Correlation Harness
-    st.markdown("##### 🔬 Engine A Statistical Correlation Harness: Customer Sentiment vs. SKU Sales Velocity")
-    corr_report = NLPSentimentEngine.correlate_sentiment_with_velocity(sku_sentiment_df, inventory_df)
+    st.markdown(f"##### 🔬 Engine A Statistical Correlation Harness: Customer Sentiment vs. SKU Sales Velocity ({selected_category})")
+    corr_report = NLPSentimentEngine.correlate_sentiment_with_velocity(filtered_sku_sentiment, filtered_inventory)
+    if corr_report.get('sample_size', 0) < 5:
+        # Fallback to full catalog if selected category has very few items
+        corr_report = NLPSentimentEngine.correlate_sentiment_with_velocity(sku_sentiment_df, inventory_df)
 
     if 'merged_data' in corr_report:
         merged_corr = corr_report['merged_data']
