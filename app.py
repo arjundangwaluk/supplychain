@@ -71,7 +71,7 @@ st.markdown("""
 @st.cache_data(show_spinner=False)
 def load_all_pipeline_data():
     """Ingests catalog and derives operational time series and customer logs."""
-    catalog = clean_raw_catalog("D:/Supply Chain/amazon.csv")
+    catalog = clean_raw_catalog()
     reviews = parse_exploded_reviews(catalog)
     sales, inventory = synthesize_supply_chain_operations(catalog, days=120)
     orders = synthesize_customer_transactions(catalog, num_customers=1000)

@@ -56,7 +56,10 @@ class NumberedCanvas(canvas.Canvas):
         self.restoreState()
 
 
-def build_pdf(filename="D:/Supply Chain/Supply_Chain_Analytics_Report.pdf"):
+DEFAULT_PDF_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Supply_Chain_Analytics_Report.pdf")
+
+
+def build_pdf(filename=DEFAULT_PDF_PATH):
     doc = SimpleDocTemplate(
         filename,
         pagesize=letter,

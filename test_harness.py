@@ -5,6 +5,7 @@ Verification & Evaluation Harness for Supply Chain ML & NLP Pipeline
 Enforces strict contracts, invariant guards, and metamorphic properties.
 """
 
+import os
 import pytest
 import numpy as np
 import pandas as pd
@@ -13,13 +14,16 @@ from nlp_engine import NLPSentimentEngine
 from forecasting_engine import InventoryForecastingEngine
 from clv_engine import CustomerLifecycleEngine
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(BASE_DIR, "amazon.csv") if os.path.exists(os.path.join(BASE_DIR, "amazon.csv")) else "amazon.csv"
+
 
 # ==========================================================
 # 1. Ingestion Contract & Data Guard Tests
 # ==========================================================
 def test_raw_catalog_ingestion_invariants():
     """Verify catalog ingestion contract, bounds, and absence of critical nulls."""
-    df = clean_raw_catalog("D:/Supply Chain/amazon.csv")
+    df = clean_raw_catalog(CSV_PATH)
 
     assert len(df) > 0, "Catalog cannot be empty"
     assert (df['discounted_price'] >= 0).all(), "Discounted prices must be strictly non-negative"

@@ -51,13 +51,23 @@ def clean_rating(value: Any) -> float:
         return np.nan
 
 
-def clean_raw_catalog(csv_path: str = "D:/Supply Chain/amazon.csv") -> pd.DataFrame:
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_CSV_PATH = os.path.join(BASE_DIR, "amazon.csv") if os.path.exists(os.path.join(BASE_DIR, "amazon.csv")) else "amazon.csv"
+
+
+def clean_raw_catalog(csv_path: str = DEFAULT_CSV_PATH) -> pd.DataFrame:
     """
     Ingests and cleans the raw Amazon catalog dataset.
     Enforces strict data ingestion contracts and validation guards.
     """
     if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"Source catalog not found at: {csv_path}")
+        # Try finding in current working directory or relative path
+        if os.path.exists("amazon.csv"):
+            csv_path = "amazon.csv"
+        elif os.path.exists(DEFAULT_CSV_PATH):
+            csv_path = DEFAULT_CSV_PATH
+        else:
+            raise FileNotFoundError(f"Source catalog not found at: {csv_path}")
 
     df = pd.read_csv(csv_path)
 
@@ -352,7 +362,7 @@ def synthesize_customer_transactions(
     return df_orders
 
 
-def run_pipeline(csv_path: str = "D:/Supply Chain/amazon.csv") -> Dict[str, pd.DataFrame]:
+def run_pipeline(csv_path: str = DEFAULT_CSV_PATH) -> Dict[str, pd.DataFrame]:
     """Orchestrates full ingestion and derivation pipeline."""
     print("=" * 70)
     print("INGESTION CONTRACT: Loading and validating raw Amazon catalog...")
