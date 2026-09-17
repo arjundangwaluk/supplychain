@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amazon-supply-chain-ai"
+version = "1.0.0"
+description = "End-to-end Machine Learning, Aspect-Based NLP, and Operations Research Supply Chain Platform"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Principal AI & Supply Chain Systems Architect"}
+]
+keywords = [
+    "supply-chain",
+    "inventory-optimization",
+    "machine-learning",
+    "nlp",
+    "forecasting",
+    "operations-research",
+    "streamlit",
+    "lightgbm"
+]
+dependencies = [
+    "numpy>=1.23.0",
+    "pandas>=1.4.0",
+    "scipy>=1.10.0",
+    "scikit-learn>=1.2.0",
+    "lightgbm>=4.0.0",
+    "xgboost>=2.0.0",
+    "vaderSentiment>=3.3.2",
+    "streamlit>=1.30.0",
+    "plotly>=5.15.0",
+    "pytest>=7.4.0"
+]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = [
+    ".",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning"
+]

@@ -1,0 +1,20 @@
+# Core Data Science & Operations Research
+numpy>=1.23.0
+pandas>=1.4.0
+scipy>=1.10.0
+scikit-learn>=1.2.0
+
+# Machine Learning & Gradient Boosting
+lightgbm>=4.0.0
+xgboost>=2.0.0
+
+# Natural Language Processing & Sentiment Analysis
+vaderSentiment>=3.3.2
+
+# Interactive Dashboard & Visualizations
+streamlit>=1.30.0
+plotly>=5.15.0
+altair>=5.0.0
+
+# Verification & Test Harness
+pytest>=7.4.0
