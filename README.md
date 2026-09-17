@@ -1,4 +1,4 @@
-# 📦 Amazon Supply Chain & AI Intelligence Hub
+# 📦 Supply Chain & AI Intelligence Hub
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
