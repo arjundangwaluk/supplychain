@@ -107,8 +107,9 @@ def get_customer_lifecycle_data(orders_df, sales_df):
     rfm = engine.compute_rfm_metrics(orders_df)
     rfm_clv = engine.calculate_clv(rfm)
     churn_results = engine.train_churn_classifier(rfm_clv)
+    scored_customers = churn_results['scored_customers']
     sales_scored, alerts = engine.detect_demand_anomalies(sales_df, z_threshold=2.5)
-    return rfm_clv, churn_results, sales_scored, alerts
+    return scored_customers, churn_results, sales_scored, alerts
 
 
 # Load data
@@ -437,6 +438,16 @@ with tab3:
 
     with c_churn:
         st.markdown("##### ⚠️ Customer Churn Risk Classification (Random Forest)")
+        if 'churn_risk_level' not in rfm_clv_df.columns:
+            if 'scored_customers' in churn_results and 'churn_risk_level' in churn_results['scored_customers'].columns:
+                rfm_clv_df = churn_results['scored_customers']
+            else:
+                rfm_clv_df['churn_probability'] = np.clip((rfm_clv_df['recency'] - 30) / 90.0, 0.0, 1.0).round(2)
+                rfm_clv_df['churn_risk_level'] = pd.cut(
+                    rfm_clv_df['churn_probability'],
+                    bins=[-0.01, 0.30, 0.70, 1.0],
+                    labels=['Low Risk', 'Moderate Risk', 'Critical Risk']
+                )
         churn_counts = rfm_clv_df['churn_risk_level'].value_counts().reset_index()
         fig_churn = px.pie(
             churn_counts,
